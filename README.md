@@ -1,6 +1,6 @@
 # five-dollar-genome-analysis-pipeline
 Workflows used for germline short variant discovery in WGS data
-### PairedSingleSampleWF :
+### germline_single_sample_workflow :
 This WDL pipeline implements data pre-processing and initial variant calling (GVCF
 generation) according to the GATK Best Practices (June 2016) for germline SNP and
 Indel discovery in human whole-genome sequencing and exome sequencing data.
@@ -21,11 +21,6 @@ Indel discovery in human whole-genome sequencing and exome sequencing data.
 - Several Summary Metrics 
 
 ### Software version requirements :
-- GATK 4.beta.3 or later 
-- Picard 2.x
-- Samtools (see gotc docker)
-- Python 2.7
-
 Cromwell version support 
-- Successfully tested on v29
+- Successfully tested on v30.2
 - Does not work on versions < v23 due to output syntax
