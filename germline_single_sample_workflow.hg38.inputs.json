@@ -38,11 +38,9 @@
   "germline_single_sample_workflow.dbSNP_vcf_index": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.idx",
   "germline_single_sample_workflow.wgs_coverage_interval_list": "gs://broad-references/hg38/v0/wgs_coverage_regions.hg38.interval_list",
   "germline_single_sample_workflow.wgs_evaluation_interval_list": "gs://broad-references/hg38/v0/wgs_evaluation_regions.hg38.interval_list",
-
-  "##_COMMENT4": "PRIVATE REFERENCES",
   "##germline_single_sample_workflow.haplotype_database_file": "gs://gatk-aas-test-data/small/empty.vcf",
 
-  "##_COMMENT5": "DISK SIZES + MISC",
+  "##_COMMENT5": "Runtime Attributes",
   "germline_single_sample_workflow.flowcell_small_disk": 100,
   "germline_single_sample_workflow.flowcell_medium_disk": 200,
   "germline_single_sample_workflow.agg_small_disk": 200,
