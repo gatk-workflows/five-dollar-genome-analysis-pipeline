@@ -6,7 +6,7 @@ generation) according to the GATK Best Practices (June 2016) for germline SNP an
 Indel discovery in human whole-genome sequencing and exome sequencing data.
 
 #### Requirements/expectations
-- Human whole-genome pair-end sequencing data in unmapped BAM (uBAM) format
+- Human whole-genome pair-end in unmapped BAM (uBAM) format
 - One or more read groups, one per uBAM file, all belonging to a single sample (SM)
 - Input uBAM files must additionally comply with the following requirements:
 - - filenames all have the same suffix (we use ".unmapped.bam")
