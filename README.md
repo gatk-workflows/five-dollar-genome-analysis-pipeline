@@ -3,10 +3,12 @@ Workflows used for germline short variant discovery in WGS data
 ### germline_single_sample_workflow :
 This WDL pipeline implements data pre-processing and initial variant calling (GVCF
 generation) according to the GATK Best Practices (June 2016) for germline SNP and
-Indel discovery in human whole-genome sequencing and exome sequencing data.
+Indel discovery in human whole-genome sequencing and exome sequencing data. The provided
+intervals in the json are intended for whole-genome sequencing, users are expected to use
+thier own exome intervals for exome sequencing. 
 
 #### Requirements/expectations
-- Human whole-genome pair-end in unmapped BAM (uBAM) format
+- Human whole-genome paired-end sequencing data in unmapped BAM (uBAM) format
 - One or more read groups, one per uBAM file, all belonging to a single sample (SM)
 - Input uBAM files must additionally comply with the following requirements:
 - - filenames all have the same suffix (we use ".unmapped.bam")
