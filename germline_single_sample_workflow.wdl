@@ -46,6 +46,7 @@ workflow germline_single_sample_workflow {
   String sample_name
   String base_file_name
   String final_gvcf_base_name
+  Boolean? genotype_and_filter
   Array[File] flowcell_unmapped_bams
   String unmapped_bam_suffix
 
@@ -177,41 +178,64 @@ workflow germline_single_sample_workflow {
   Int potential_hc_divisor = ScatterIntervalList.interval_count - 20
   Int hc_divisor = if potential_hc_divisor > 1 then potential_hc_divisor else 1
 
+  #If we're genotyping and filtering, do the filter in the scatter
+  Boolean do_filtering = select_first([genotype_and_filter, false])
+
+
   # Call variants in parallel over WGS calling intervals
   scatter (index in range(ScatterIntervalList.interval_count)) {
     # Generate GVCF by interval
-    call Calling.HaplotypeCaller_GATK35_GVCF as HaplotypeCaller {
-      input:
-        contamination = to_bam_workflow.contamination,
-        input_bam = to_bam_workflow.output_bam,
-        interval_list = ScatterIntervalList.out[index],
-        gvcf_basename = base_file_name,
-        ref_dict = ref_dict,
-        ref_fasta = ref_fasta,
-        ref_fasta_index = ref_fasta_index,
-        # Divide the total output GVCF size and the input bam size to account for the smaller scattered input and output.
-        disk_size = ((binned_qual_bam_size + GVCF_disk_size) / hc_divisor) + ref_size + additional_disk,
-        preemptible_tries = agg_preemptible_tries
-     }
+       call HaplotypeCaller {
+         input:
+           contamination = to_bam_workflow.contamination,
+           input_bam = to_bam_workflow.output_bam,
+           interval_list = ScatterIntervalList.out[index],
+           gvcf_basename = base_file_name,
+           genotype_and_filter = genotype_and_filter,
+           ref_dict = ref_dict,
+           ref_fasta = ref_fasta,
+           ref_fasta_index = ref_fasta_index,
+           # Divide the total output GVCF size and the input bam size to account for the smaller scattered input and output.
+           disk_size = ((binned_qual_bam_size + GVCF_disk_size) / hc_divisor) + ref_size + additional_disk,
+           preemptible_tries = agg_preemptible_tries
+        }
+       if (do_filtering) {
+         call FilterVcf {
+           input:
+             input_vcf = HaplotypeCaller.output_gvcf,
+             input_vcf_index = HaplotypeCaller.output_gvcf_index,
+             gvcf_basename = base_file_name,
+             interval_list = ScatterIntervalList.out[index],
+             gvcf_basename = base_file_name,
+             # The output here should be the same size
+             disk_size = ((binned_qual_bam_size + GVCF_disk_size) / hc_divisor) + ref_size + additional_disk,
+             preemptible_tries = preemptible_tries
+         }
+       }
+       File merge_input = select_first([FilterVcf.output_vcf, HaplotypeCaller.output_gvcf])
+       File merge_input_index = select_first([FilterVcf.output_vcf_index, HaplotypeCaller.output_gvcf_index])
   }
 
-  # Combine by-interval GVCFs into a single sample GVCF file
+  String name_token = if do_filtering then ".filtered" else ".g"
+
+  # Combine by-interval (G)VCFs into a single sample (G)VCF file
   call Calling.MergeVCFs as MergeVCFs {
     input:
-      input_vcfs = HaplotypeCaller.output_gvcf,
-      input_vcfs_indexes = HaplotypeCaller.output_gvcf_index,
-      output_vcf_name = final_gvcf_base_name + ".g.vcf.gz",
+      input_vcfs = merge_input,
+      input_vcfs_indexes = merge_input_index,
+      output_vcf_name = final_gvcf_base_name + name_token + ".vcf.gz",
       disk_size = GVCF_disk_size,
       preemptible_tries = agg_preemptible_tries
   }
 
   Float gvcf_size = size(MergeVCFs.output_vcf, "GB")
 
-  # Validate the GVCF output of HaplotypeCaller
-  call QC.ValidateGVCF as ValidateGVCF {
+  # Validate the (G)VCF output of HaplotypeCaller
+  call ValidateGVCF {
     input:
       input_vcf = MergeVCFs.output_vcf,
       input_vcf_index = MergeVCFs.output_vcf_index,
+      genotype_and_filter = genotype_and_filter,
       dbSNP_vcf = dbSNP_vcf,
       dbSNP_vcf_index = dbSNP_vcf_index,
       ref_fasta = ref_fasta,
@@ -294,6 +318,128 @@ workflow germline_single_sample_workflow {
 
     File output_vcf = MergeVCFs.output_vcf
     File output_vcf_index = MergeVCFs.output_vcf_index
+  }
+}
+
+# Call variants on a single sample with HaplotypeCaller to produce a GVCF
+task HaplotypeCaller {
+  String input_bam
+  File interval_list
+  String gvcf_basename
+
+  Boolean? genotype_and_filter
+  File ref_dict
+  File ref_fasta
+  File ref_fasta_index
+  Float? contamination
+  Float disk_size
+  Int preemptible_tries
+
+  # We use interval_padding 500 below to make sure that the HaplotypeCaller has context on both sides around
+  # the interval because the assembly uses them.
+  #
+  # Using PrintReads is a temporary solution until we update HaploypeCaller to use GATK4. Once that is done,
+  # HaplotypeCaller can stream the required intervals directly from the cloud.
+
+  Boolean add_gvcf_args = select_first([!genotype_and_filter, true])
+  String output_suffix = if add_gvcf_args then ".g.vcf.gz" else ".vcf.gz"
+  String output_filename = gvcf_basename + output_suffix
+
+  command {
+    /usr/gitc/gatk4/gatk-launch --javaOptions "-Xms2g" \
+      PrintReads \
+      -I ${input_bam} \
+      --interval_padding 500 \
+      -L ${interval_list} \
+      -O local.sharded.bam \
+    && \
+    java -XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -Xms8000m \
+      -jar /usr/gitc/GATK35.jar \
+      -T HaplotypeCaller \
+      -R ${ref_fasta} \
+      -o ${output_filename} \
+      -I local.sharded.bam \
+      -L ${interval_list} \
+      --max_alternate_alleles 3 \
+      ${true='-ERC GVCF -variant_index_parameter 128000 -variant_index_type LINEAR' false='' add_gvcf_args} \
+      -contamination ${default=0 contamination} \
+      --read_filter OverclippedRead
+  }
+  runtime {
+    preemptible: preemptible_tries
+    memory: "10 GB"
+    cpu: "1"
+    disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
+  }
+  output {
+    File output_gvcf = "${output_filename}"
+    File output_gvcf_index = "${output_filename}.tbi"
+  }
+}
+
+task FilterVcf {
+  File input_vcf
+  File input_vcf_index
+  String gvcf_basename
+  File interval_list
+  Float disk_size
+  Int preemptible_tries
+
+  String output_vcf_name = gvcf_basename + ".filtered.vcf.gz"
+
+  command {
+     /usr/gitc/gatk4/gatk-launch --javaOptions "-Xms3000m" \
+      VariantFiltration \
+      -V ${input_vcf} \
+      -L ${interval_list} \
+      --filterExpression "QD < 2.0 || FS > 30.0 || SOR > 3.0 || MQ < 40.0 || MQRankSum < -3.0 || ReadPosRankSum < -3.0" \
+      --filterName "HardFiltered" \
+      -O ${output_vcf_name}
+  }
+  output {
+      File output_vcf = "${output_vcf_name}"
+      File output_vcf_index = "${output_vcf_name}.tbi"
+    }
+  runtime {
+    preemptible: preemptible_tries
+    memory: "3500 MB"
+    disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
+  }
+}
+
+# Validate a (G)VCF with -gvcf specific validation if necessary
+task ValidateGVCF {
+  File input_vcf
+  File input_vcf_index
+  File ref_fasta
+  File ref_fasta_index
+  File ref_dict
+  File dbSNP_vcf
+  File dbSNP_vcf_index
+  File wgs_calling_interval_list
+  Float disk_size
+  Int preemptible_tries
+  Boolean? genotype_and_filter
+
+  Boolean gvcf_mode = if defined(genotype_and_filter) then !genotype_and_filter else true
+
+  command {
+    /usr/gitc/gatk4/gatk-launch --javaOptions "-Xms3000m" \
+      ValidateVariants \
+      -V ${input_vcf} \
+      -R ${ref_fasta} \
+      -L ${wgs_calling_interval_list} \
+      ${true='-gvcf' false='' gvcf_mode}   \
+      --validationTypeToExclude ALLELES \
+      --dbsnp ${dbSNP_vcf}
+  }
+  runtime {
+    preemptible: preemptible_tries
+    memory: "3500 MB"
+    disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
   }
 }
 

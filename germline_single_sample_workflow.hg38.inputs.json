@@ -1,5 +1,6 @@
 {
-  "##_COMMENT1": "Take note of the .64 extensions on the reference files, issues between 32 and 64 bit OS",
+  "##_COMMENT1": "OPTIONS - set to true to produce a genotyped, hard filtered VCF",
+  "germline_single_sample_workflow.genotype_and_filter": false,
 
   "##_COMMENT2": "SAMPLE NAME AND UNMAPPED BAMS - read the README to find other examples.",
   "germline_single_sample_workflow.sample_name": "NA12878",
@@ -20,6 +21,7 @@
   "germline_single_sample_workflow.ref_dict": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.dict",
   "germline_single_sample_workflow.ref_fasta": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
   "germline_single_sample_workflow.ref_fasta_index": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
+  "##_COMMENT4": "Take note of the .64 extensions on the reference files, issues between 32 and 64 bit OS",
   "germline_single_sample_workflow.ref_alt": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.alt",
   "germline_single_sample_workflow.ref_sa": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.sa",
   "germline_single_sample_workflow.ref_amb": "gs://broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.amb",
@@ -39,10 +41,7 @@
   "germline_single_sample_workflow.wgs_coverage_interval_list": "gs://broad-references/hg38/v0/wgs_coverage_regions.hg38.interval_list",
   "germline_single_sample_workflow.wgs_evaluation_interval_list": "gs://broad-references/hg38/v0/wgs_evaluation_regions.hg38.interval_list",
 
-  "##_COMMENT4": "PRIVATE REFERENCES",
-  "##germline_single_sample_workflow.haplotype_database_file": "gs://gatk-aas-test-data/small/empty.vcf",
-
-  "##_COMMENT5": "DISK SIZES + MISC",
+  "##_COMMENT6": "RUNTIME ATTRIBUTES",
   "germline_single_sample_workflow.flowcell_small_disk": 100,
   "germline_single_sample_workflow.flowcell_medium_disk": 200,
   "germline_single_sample_workflow.agg_small_disk": 200,
@@ -51,7 +50,7 @@
   "germline_single_sample_workflow.preemptible_tries": 3,
   "germline_single_sample_workflow.agg_preemptible_tries": 3,
 
-  "##_COMMENT6": "MISC",
+  "##_COMMENT6": "PIPELINING CONSTANTS",
   "germline_single_sample_workflow.break_bands_at_multiples_of": 1000000,
   "germline_single_sample_workflow.haplotype_scatter_count": 51 
 }
