@@ -26,10 +26,10 @@
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-import "./unmapped_bam_to_aligned_bam.wdl" as to_bam
-import "./tasks/germline_variant_discovery.wdl" as Calling
-import "./tasks/qc.wdl" as QC
-import "./tasks/utilities.wdl" as Utils
+import "./tasks_pipelines/unmapped_bam_to_aligned_bam.wdl" as ToBam
+import "./tasks_pipelines/germline_variant_discovery.wdl" as Calling
+import "./tasks_pipelines/qc.wdl" as QC
+import "./tasks_pipelines/utilities.wdl" as Utils
 
 # WORKFLOW DEFINITION
 workflow germline_single_sample_workflow {
@@ -75,7 +75,7 @@ workflow germline_single_sample_workflow {
   # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
   Int? increase_disk_size
 
-  call to_bam.to_bam_workflow {
+  call ToBam.to_bam_workflow {
     input:
       contamination_sites_ud = contamination_sites_ud,
       contamination_sites_bed = contamination_sites_bed,
