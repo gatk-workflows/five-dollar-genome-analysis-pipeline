@@ -7,7 +7,7 @@ Indel discovery in human whole-genome sequencing and exome sequencing data. The 
 intervals in the json are intended for whole-genome sequencing, users are expected to use
 thier own exome intervals for exome sequencing. 
 
-Note: For those users interested interested in running this wdl on FireCloud (FC), the FC
+Note: For those users interested in running this wdl on FireCloud (FC), the FC
 version has been provided as fc_germline_single_sample_workflow.wdl. Please visit the 
 FC featured methods and workspaces for more GATK Best Practices pipelines.
 
