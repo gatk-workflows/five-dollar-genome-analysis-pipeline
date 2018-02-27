@@ -13,9 +13,9 @@
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-import "./tasks/alignment.wdl" as Alignment
-import "./tasks/bam_processing.wdl" as Processing
-import "./tasks/utilities.wdl" as Utils
+import "./tasks_pipelines/alignment.wdl" as Alignment
+import "./tasks_pipelines/bam_processing.wdl" as Processing
+import "./tasks_pipelines/utilities.wdl" as Utils
 
 workflow split_large_readgroup {
   File input_bam

@@ -65,6 +65,9 @@ task HaplotypeCaller_GATK35_GVCF {
   }
 }
 
+# TODO --
+#       -O ${vcf_basename}.vcf.gz \
+#        -contamination ${default=0 contamination} ${true="-ERC GVCF" false="" make_gvcf}
 task HaplotypeCaller_GATK4_VCF {
   String input_bam
   File interval_list
@@ -73,14 +76,9 @@ task HaplotypeCaller_GATK4_VCF {
   File ref_fasta
   File ref_fasta_index
   Float contamination
+  Boolean make_gvcf
   Float disk_size
   Int preemptible_tries
-
-  # TODO -- do we still need this?
-  # We use interval_padding 500 below to make sure that the HaplotypeCaller has context on both sides around
-  # the interval because the assembly uses them.
-
-  # TODO -- ADD ME: -contamination ${contamination} \
 
   command <<<
 
@@ -92,7 +90,7 @@ task HaplotypeCaller_GATK4_VCF {
       -R ${ref_fasta} \
       -I ${input_bam} \
       -L ${interval_list} \
-      -O ${vcf_basename}.vcf.gz
+      -O ${vcf_basename}.vcf.gz ${true="-ERC GVCF" false="" make_gvcf}
   >>>
   runtime {
     docker: "broadinstitute/gatk-nightly:2018-02-08-4.0.1.1-11-g9b93440-SNAPSHOT"
@@ -102,8 +100,8 @@ task HaplotypeCaller_GATK4_VCF {
     disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
   }
   output {
-    File output_gvcf = "${vcf_basename}.vcf.gz"
-    File output_gvcf_index = "${vcf_basename}.vcf.gz.tbi"
+    File output_vcf = "${vcf_basename}.vcf.gz"
+    File output_vcf_index = "${vcf_basename}.vcf.gz.tbi"
   }
 }
 
@@ -132,6 +130,37 @@ task MergeVCFs {
   output {
     File output_vcf = "${output_vcf_name}"
     File output_vcf_index = "${output_vcf_name}.tbi"
+  }
+}
+
+task HardFilterVcf {
+  File input_vcf
+  File input_vcf_index
+  String vcf_basename
+  File interval_list
+  Int disk_size
+  Int preemptible_tries
+
+  String output_vcf_name = vcf_basename + ".filtered.vcf.gz"
+
+  command {
+     /usr/gitc/gatk4/gatk-launch --javaOptions "-Xms3000m" \
+      VariantFiltration \
+      -V ${input_vcf} \
+      -L ${interval_list} \
+      --filterExpression "QD < 2.0 || FS > 30.0 || SOR > 3.0 || MQ < 40.0 || MQRankSum < -3.0 || ReadPosRankSum < -3.0" \
+      --filterName "HardFiltered" \
+      -O ${output_vcf_name}
+  }
+  output {
+      File output_vcf = "${output_vcf_name}"
+      File output_vcf_index = "${output_vcf_name}.tbi"
+    }
+  runtime {
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
+    preemptible: preemptible_tries
+    memory: "3 GB"
+    disks: "local-disk " + disk_size + " HDD"
   }
 }
 

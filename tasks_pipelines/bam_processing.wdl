@@ -13,7 +13,7 @@
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-# Sort BAM file by coordinate order and fix tag values for NM and UQ
+# Sort BAM file by coordinate order 
 task SortSam {
   File input_bam
   String output_bam_basename
@@ -43,6 +43,40 @@ task SortSam {
     File output_bam = "${output_bam_basename}.bam"
     File output_bam_index = "${output_bam_basename}.bai"
     File output_bam_md5 = "${output_bam_basename}.bam.md5"
+  }
+}
+
+# Sort BAM file by coordinate order -- using Spark!
+task SortSamSpark {
+  File input_bam
+  String output_bam_basename
+  Int preemptible_tries
+  Int compression_level
+  Float disk_size
+
+  command {
+    set -e
+    export GATK_LOCAL_JAR=/root/gatk.jar
+
+    gatk --java-options "-Dsamjdk.compression_level=${compression_level} -Xms13g -Xmx13g" \
+      SortSamSpark \
+      -I ${input_bam} \
+      -O ${output_bam_basename}.bam \
+      -- --conf spark.local.dir=. --spark-master 'local[16]' --conf 'spark.kryo.referenceTracking=false'
+
+      samtools index ${output_bam_basename}.bam ${output_bam_basename}.bai
+  }
+  runtime {
+    docker: "us.gcr.io/broad-dsde-methods/broad-gatk-snapshots:4.0.1.2-18-g78fbcd88a-ericSortSamEval"
+    disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    bootDiskSizeGb: "15"
+    cpu: "16"
+    memory: "14 GB"
+    preemptible: preemptible_tries
+  }
+  output {
+    File output_bam = "${output_bam_basename}.bam"
+    File output_bam_index = "${output_bam_basename}.bai"
   }
 }
 
