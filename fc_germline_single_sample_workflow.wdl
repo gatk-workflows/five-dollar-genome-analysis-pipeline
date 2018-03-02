@@ -116,16 +116,14 @@ workflow germline_single_sample_workflow {
 
     Float unmapped_bam_size = size(unmapped_bam, "GB")
 
-    String sub_strip_path = "gs://.*/"
-    String sub_strip_unmapped = unmapped_bam_suffix + "$"
-    String sub_sub = sub(sub(unmapped_bam, sub_strip_path, ""), sub_strip_unmapped, "")
-
+    String unmapped_bam_basename = basename(unmapped_bam, unmapped_bam_suffix)
+    
     if (!skip_QC) {
       # QC the unmapped BAM
       call QC.CollectQualityYieldMetrics as CollectQualityYieldMetrics {
         input:
           input_bam = unmapped_bam,
-          metrics_filename = sub_sub + ".unmapped.quality_yield_metrics",
+          metrics_filename = unmapped_bam_basename + ".unmapped.quality_yield_metrics",
           disk_size = unmapped_bam_size + additional_disk,
           preemptible_tries = preemptible_tries
       }
@@ -139,7 +137,7 @@ workflow germline_single_sample_workflow {
           input_bam = unmapped_bam,
           bwa_commandline = bwa_commandline,
           bwa_version = GetBwaVersion.version,
-          output_bam_basename = sub_sub + ".aligned.unsorted",
+          output_bam_basename = unmapped_bam_basename + ".aligned.unsorted",
           ref_fasta = ref_fasta,
           ref_fasta_index = ref_fasta_index,
           ref_dict = ref_dict,
@@ -164,7 +162,7 @@ workflow germline_single_sample_workflow {
         input:
           input_bam = unmapped_bam,
           bwa_commandline = bwa_commandline,
-          output_bam_basename = sub_sub + ".aligned.unsorted",
+          output_bam_basename = unmapped_bam_basename + ".aligned.unsorted",
           ref_fasta = ref_fasta,
           ref_fasta_index = ref_fasta_index,
           ref_dict = ref_dict,
@@ -193,7 +191,7 @@ workflow germline_single_sample_workflow {
       call QC.CollectUnsortedReadgroupBamQualityMetrics as CollectUnsortedReadgroupBamQualityMetrics {
         input:
           input_bam = output_aligned_bam,
-          output_bam_prefix = sub_sub + ".readgroup",
+          output_bam_prefix = unmapped_bam_basename + ".readgroup",
           disk_size = mapped_bam_size + additional_disk,
           preemptible_tries = preemptible_tries
       }
