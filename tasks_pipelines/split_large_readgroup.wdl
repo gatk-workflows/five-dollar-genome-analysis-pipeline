@@ -94,7 +94,7 @@ workflow split_large_readgroup {
   call Processing.GatherBamFiles as GatherMonolithicBamFile {
     input:
       input_bams = SamToFastqAndBwaMemAndMba.output_bam,
-      disk_size = ceil((2 * SumSplitAlignedSizes.total_size) + additional_disk),
+      disk_size = (2 * SumSplitAlignedSizes.total_size) + additional_disk,
       output_bam_basename = output_bam_basename,
       preemptible_tries = preemptible_tries,
       compression_level = compression_level
