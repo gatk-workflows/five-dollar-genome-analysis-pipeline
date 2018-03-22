@@ -22,8 +22,11 @@ task HaplotypeCaller_GATK35_GVCF {
   File ref_fasta
   File ref_fasta_index
   Float? contamination
-  Float disk_size
   Int preemptible_tries
+  Int hc_scatter
+
+  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + size(ref_dict, "GB")
+  Int disk_size = ceil(((size(input_bam, "GB") + 30) / hc_scatter) + ref_size) + 20
 
   # We use interval_padding 500 below to make sure that the HaplotypeCaller has context on both sides around
   # the interval because the assembly uses them.
@@ -53,11 +56,11 @@ task HaplotypeCaller_GATK35_GVCF {
       --read_filter OverclippedRead
   }
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
     preemptible: preemptible_tries
     memory: "10 GB"
     cpu: "1"
-    disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    disks: "local-disk " + disk_size + " HDD"
   }
   output {
     File output_gvcf = "${gvcf_basename}.vcf.gz"
@@ -65,9 +68,6 @@ task HaplotypeCaller_GATK35_GVCF {
   }
 }
 
-# TODO --
-#       -O ${vcf_basename}.vcf.gz \
-#        -contamination ${default=0 contamination} ${true="-ERC GVCF" false="" make_gvcf}
 task HaplotypeCaller_GATK4_VCF {
   String input_bam
   File interval_list
@@ -77,8 +77,11 @@ task HaplotypeCaller_GATK4_VCF {
   File ref_fasta_index
   Float contamination
   Boolean make_gvcf
-  Float disk_size
   Int preemptible_tries
+  Int hc_scatter
+
+  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + size(ref_dict, "GB")
+  Int disk_size = ceil(((size(input_bam, "GB") + 30) / hc_scatter) + ref_size) + 20
 
   command <<<
 
@@ -90,14 +93,15 @@ task HaplotypeCaller_GATK4_VCF {
       -R ${ref_fasta} \
       -I ${input_bam} \
       -L ${interval_list} \
-      -O ${vcf_basename}.vcf.gz ${true="-ERC GVCF" false="" make_gvcf}
+      -O ${vcf_basename}.vcf.gz \
+      -contamination ${default=0 contamination} ${true="-ERC GVCF" false="" make_gvcf}
   >>>
   runtime {
-    docker: "broadinstitute/gatk-nightly:2018-02-08-4.0.1.1-11-g9b93440-SNAPSHOT"
+    docker: "us.gcr.io/broad-gatk/gatk:4.0.2.1"
     preemptible: preemptible_tries
     memory: "6.5 GB"
     cpu: "1"
-    disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    disks: "local-disk " + disk_size + " HDD"
   }
   output {
     File output_vcf = "${vcf_basename}.vcf.gz"
@@ -110,7 +114,6 @@ task MergeVCFs {
   Array[File] input_vcfs
   Array[File] input_vcfs_indexes
   String output_vcf_name
-  Int disk_size
   Int preemptible_tries
 
   # Using MergeVcfs instead of GatherVcfs so we can create indices
@@ -122,10 +125,10 @@ task MergeVCFs {
       OUTPUT=${output_vcf_name}
   }
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
     preemptible: preemptible_tries
     memory: "3 GB"
-    disks: "local-disk " + disk_size + " HDD"
+    disks: "local-disk 30 HDD"
   }
   output {
     File output_vcf = "${output_vcf_name}"
@@ -138,9 +141,9 @@ task HardFilterVcf {
   File input_vcf_index
   String vcf_basename
   File interval_list
-  Int disk_size
   Int preemptible_tries
 
+  Int disk_size = ceil(2 * size(input_vcf, "GB")) + 20
   String output_vcf_name = vcf_basename + ".filtered.vcf.gz"
 
   command {
@@ -163,4 +166,3 @@ task HardFilterVcf {
     disks: "local-disk " + disk_size + " HDD"
   }
 }
-

@@ -105,7 +105,7 @@ task ScatterIntervalList {
     Int interval_count = read_int(stdout())
   }
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
     memory: "2 GB"
   }
 }
@@ -117,8 +117,10 @@ task ConvertToCram {
   File ref_fasta
   File ref_fasta_index
   String output_basename
-  Float disk_size
   Int preemptible_tries
+
+  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
+  Int disk_size = ceil(2 * size(input_bam, "GB") + ref_size) + 20
 
   command <<<
     set -e
@@ -136,11 +138,11 @@ task ConvertToCram {
     samtools index ${output_basename}.cram
   >>>
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
     preemptible: preemptible_tries
     memory: "3 GB"
     cpu: "1"
-    disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    disks: "local-disk " + disk_size + " HDD"
   }
   output {
     File output_cram = "${output_basename}.cram"
@@ -165,7 +167,7 @@ task ConvertToBam {
     samtools index ${output_basename}.bam
   >>>
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
     preemptible: 3
     memory: "3 GB"
     cpu: "1"
@@ -193,4 +195,3 @@ task SumFloats {
     preemptible: preemptible_tries
   }
 }
-

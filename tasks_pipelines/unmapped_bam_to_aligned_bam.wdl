@@ -58,24 +58,7 @@ workflow to_bam_workflow {
 
   Float cutoff_for_large_rg_in_gb = 20.0
 
-  # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
-  Int? increase_disk_size
-
-  # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
-  # Cromwell error from asking for 0 disk when the input is less than 1GB
-  Int additional_disk = select_first([increase_disk_size, 20])
-  # Sometimes the output is larger than the input, or a task can spill to disk. In these cases we need to account for the
-  # input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
-  Float bwa_disk_multiplier = 2.5
-  # SortSam spills to disk a lot more because we are only store 300000 records in RAM now because its faster for our data
-  # so it needs more disk space.  Also it spills to disk in an uncompressed format so we need to account for that with a
-  # larger multiplier
-  Float sort_sam_disk_multiplier = 3.25
-
-  # Mark Duplicates takes in as input readgroup bams and outputs a slightly smaller aggregated bam. Giving .25 as wiggleroom
-  Float md_disk_multiplier = 2.25
-
-  String bwa_commandline="bwa mem -K 100000000 -p -v 3 -t 16 -Y $bash_ref_fasta"
+  String bwa_commandline = "bwa mem -K 100000000 -p -v 3 -t 16 -Y $bash_ref_fasta"
 
   String recalibrated_bam_basename = base_file_name + ".aligned.duplicates_marked.recalibrated"
 
@@ -86,9 +69,6 @@ workflow to_bam_workflow {
   call Alignment.GetBwaVersion
 
   # Get the size of the standard reference files as well as the additional reference files needed for BWA
-  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + size(ref_dict, "GB")
-  Float bwa_ref_size = ref_size + size(ref_alt, "GB") + size(ref_amb, "GB") + size(ref_ann, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_sa, "GB")
-  Float dbsnp_size = size(dbSNP_vcf, "GB")
 
   # Align flowcell-level unmapped input bams in parallel
   scatter (unmapped_bam in flowcell_unmapped_bams) {
@@ -102,7 +82,6 @@ workflow to_bam_workflow {
       input:
         input_bam = unmapped_bam,
         metrics_filename = unmapped_bam_basename + ".unmapped.quality_yield_metrics",
-        disk_size = unmapped_bam_size + additional_disk,
         preemptible_tries = preemptible_tries
     }
 
@@ -124,12 +103,8 @@ workflow to_bam_workflow {
           ref_bwt = ref_bwt,
           ref_pac = ref_pac,
           ref_sa = ref_sa,
-          additional_disk = additional_disk,
           compression_level = compression_level,
-          preemptible_tries = preemptible_tries,
-          bwa_ref_size = bwa_ref_size,
-          disk_multiplier = bwa_disk_multiplier,
-          unmapped_bam_size = unmapped_bam_size
+          preemptible_tries = preemptible_tries
       }
     }
 
@@ -150,9 +125,6 @@ workflow to_bam_workflow {
           ref_pac = ref_pac,
           ref_sa = ref_sa,
           bwa_version = GetBwaVersion.version,
-          # The merged bam can be bigger than only the aligned bam,
-          # so account for the output size by multiplying the input size by 2.75.
-          disk_size = unmapped_bam_size + bwa_ref_size + (bwa_disk_multiplier * unmapped_bam_size) + additional_disk,
           compression_level = compression_level,
           preemptible_tries = preemptible_tries
       }
@@ -168,7 +140,6 @@ workflow to_bam_workflow {
       input:
         input_bam = output_aligned_bam,
         output_bam_prefix = unmapped_bam_basename + ".readgroup",
-        disk_size = mapped_bam_size + additional_disk,
         preemptible_tries = preemptible_tries
     }
   }
@@ -188,25 +159,21 @@ workflow to_bam_workflow {
       input_bams = output_aligned_bam,
       output_bam_basename = base_file_name + ".aligned.unsorted.duplicates_marked",
       metrics_filename = base_file_name + ".duplicate_metrics",
-      # The merged bam will be smaller than the sum of the parts so we need to account for the unmerged inputs
-      # and the merged output.
-      disk_size = (md_disk_multiplier * SumFloats.total_size) + additional_disk,
+      total_input_size = SumFloats.total_size,
       compression_level = compression_level,
       preemptible_tries = agg_preemptible_tries
   }
-
-  Float agg_bam_size = size(MarkDuplicates.output_bam, "GB")
 
   # Sort aggregated+deduped BAM file and fix tags
   call Processing.SortSam as SortSampleBam {
     input:
       input_bam = MarkDuplicates.output_bam,
       output_bam_basename = base_file_name + ".aligned.duplicate_marked.sorted",
-      # This task spills to disk so we need space for the input bam, the output bam, and any spillage.
-      disk_size = (sort_sam_disk_multiplier * agg_bam_size) + additional_disk,
       compression_level = compression_level,
       preemptible_tries = agg_preemptible_tries
   }
+
+  Float agg_bam_size = size(SortSampleBam.output_bam, "GB")
 
   if (defined(haplotype_database_file)) {
     # Check identity of fingerprints across readgroups
@@ -216,7 +183,7 @@ workflow to_bam_workflow {
         input_bam_indexes = SortSampleBam.output_bam_index,
         haplotype_database_file = haplotype_database_file,
         metrics_filename = base_file_name + ".crosscheck",
-        disk_size = agg_bam_size + additional_disk,
+        total_input_size = agg_bam_size,
         preemptible_tries = agg_preemptible_tries
     }
   }
@@ -239,7 +206,6 @@ workflow to_bam_workflow {
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
       output_prefix = base_file_name + ".preBqsr",
-      disk_size = agg_bam_size + ref_size + additional_disk,
       preemptible_tries = agg_preemptible_tries,
       contamination_underestimation_factor = 0.75
   }
@@ -266,8 +232,7 @@ workflow to_bam_workflow {
         ref_dict = ref_dict,
         ref_fasta = ref_fasta,
         ref_fasta_index = ref_fasta_index,
-        # We need disk to localize the sharded bam due to the scatter.
-        disk_size = (agg_bam_size / bqsr_divisor) + ref_size + dbsnp_size + additional_disk,
+        bqsr_scatter = bqsr_divisor,
         preemptible_tries = agg_preemptible_tries
     }
   }
@@ -278,7 +243,6 @@ workflow to_bam_workflow {
     input:
       input_bqsr_reports = BaseRecalibrator.recalibration_report,
       output_report_filename = base_file_name + ".recal_data.csv",
-      disk_size = additional_disk,
       preemptible_tries = preemptible_tries
   }
 
@@ -293,26 +257,21 @@ workflow to_bam_workflow {
         ref_dict = ref_dict,
         ref_fasta = ref_fasta,
         ref_fasta_index = ref_fasta_index,
-        # We need disk to localize the sharded bam and the sharded output due to the scatter.
-        disk_size = ((agg_bam_size * 3) / bqsr_divisor) + ref_size + additional_disk,
+        bqsr_scatter = bqsr_divisor,
         compression_level = compression_level,
         preemptible_tries = agg_preemptible_tries
     }
   }
 
   # Merge the recalibrated BAM files resulting from by-interval recalibration
-  call Processing.GatherBamFiles as GatherBamFiles {
+  call Processing.GatherSortedBamFiles as GatherBamFiles {
     input:
       input_bams = ApplyBQSR.recalibrated_bam,
       output_bam_basename = base_file_name,
-      # Multiply the input bam size by two to account for the input and output
-      disk_size = (2 * agg_bam_size) + additional_disk,
+      total_input_size = agg_bam_size,
       compression_level = compression_level,
       preemptible_tries = agg_preemptible_tries
   }
-
-  #BQSR bins the qualities which makes a significantly smaller bam
-  Float binned_qual_bam_size = size(GatherBamFiles.output_bam, "GB")
 
   # QC the final BAM (consolidated after scattered BQSR)
   call QC.CollectReadgroupBamQualityMetrics as CollectReadgroupBamQualityMetrics {
@@ -323,7 +282,6 @@ workflow to_bam_workflow {
       ref_dict = ref_dict,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
-      disk_size = binned_qual_bam_size + ref_size + additional_disk,
       preemptible_tries = agg_preemptible_tries
   }
 
@@ -336,7 +294,6 @@ workflow to_bam_workflow {
       ref_dict = ref_dict,
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
-      disk_size = binned_qual_bam_size + ref_size + additional_disk,
       preemptible_tries = agg_preemptible_tries
   }
 
@@ -351,7 +308,6 @@ workflow to_bam_workflow {
         genotypes_index = fingerprint_genotypes_index,
         output_basename = base_file_name,
         sample = sample_name,
-        disk_size = binned_qual_bam_size + additional_disk,
         preemptible_tries = agg_preemptible_tries
     }
   }
@@ -366,7 +322,6 @@ workflow to_bam_workflow {
       ref_fasta_index = ref_fasta_index,
       wgs_coverage_interval_list = wgs_coverage_interval_list,
       read_length = read_length,
-      disk_size = binned_qual_bam_size + ref_size + additional_disk,
       preemptible_tries = agg_preemptible_tries
   }
 
@@ -380,7 +335,6 @@ workflow to_bam_workflow {
       ref_fasta_index = ref_fasta_index,
       wgs_coverage_interval_list = wgs_coverage_interval_list,
       read_length = read_length,
-      disk_size = binned_qual_bam_size + ref_size + additional_disk,
       preemptible_tries = agg_preemptible_tries
   }
 
@@ -390,7 +344,6 @@ workflow to_bam_workflow {
       input_bam = GatherBamFiles.output_bam,
       input_bam_index = GatherBamFiles.output_bam_index,
       read_group_md5_filename = recalibrated_bam_basename + ".bam.read_group_md5",
-      disk_size = binned_qual_bam_size + additional_disk,
       preemptible_tries = agg_preemptible_tries
   }
 

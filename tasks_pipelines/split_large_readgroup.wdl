@@ -35,23 +35,14 @@ workflow split_large_readgroup {
   File ref_bwt
   File ref_pac
   File ref_sa
-  Int additional_disk
   Int compression_level
   Int preemptible_tries
   Int reads_per_file = 48000000
-
-  Float bwa_ref_size
-  Float disk_multiplier
-
-  Float unmapped_bam_size
 
   call Alignment.SamSplitter as SamSplitter {
     input :
       input_bam = input_bam,
       n_reads = reads_per_file,
-      # Since the output bams are less compressed than the input bam we need a disk multiplier
-      # that's larger than 2.
-      disk_size = ceil(disk_multiplier * unmapped_bam_size + additional_disk),
       preemptible_tries = preemptible_tries,
       compression_level = compression_level
   }
@@ -75,9 +66,6 @@ workflow split_large_readgroup {
         ref_pac = ref_pac,
         ref_sa = ref_sa,
         bwa_version = bwa_version,
-        # The merged bam can be bigger than only the aligned bam,
-        # so account for the output size by multiplying the input size by 2.75.
-        disk_size = current_unmapped_bam_size + bwa_ref_size + (disk_multiplier * current_unmapped_bam_size) + additional_disk,
         compression_level = compression_level,
         preemptible_tries = preemptible_tries
     }
@@ -91,10 +79,10 @@ workflow split_large_readgroup {
       preemptible_tries = preemptible_tries
   }
 
-  call Processing.GatherBamFiles as GatherMonolithicBamFile {
+  call Processing.GatherUnsortedBamFiles as GatherMonolithicBamFile {
     input:
       input_bams = SamToFastqAndBwaMemAndMba.output_bam,
-      disk_size = (2 * SumSplitAlignedSizes.total_size) + additional_disk,
+      total_input_size = SumSplitAlignedSizes.total_size,
       output_bam_basename = output_bam_basename,
       preemptible_tries = preemptible_tries,
       compression_level = compression_level
