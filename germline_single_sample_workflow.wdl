@@ -72,9 +72,6 @@ workflow germline_single_sample_workflow {
   Int preemptible_tries
   Int agg_preemptible_tries
 
-  # Optional input to increase all disk sizes in case of outlier sample with strange size behavior
-  Int? increase_disk_size
-
   call ToBam.to_bam_workflow {
     input:
       contamination_sites_ud = contamination_sites_ud,
@@ -103,20 +100,8 @@ workflow germline_single_sample_workflow {
       known_indels_sites_VCFs = known_indels_sites_VCFs,
       known_indels_sites_indices = known_indels_sites_indices,
       preemptible_tries = preemptible_tries,
-      agg_preemptible_tries = agg_preemptible_tries,
-      increase_disk_size = increase_disk_size
+      agg_preemptible_tries = agg_preemptible_tries
   }
-
-  # Some tasks need wiggle room, and we also need to add a small amount of disk to prevent getting a
-  # Cromwell error from asking for 0 disk when the input is less than 1GB
-  Int additional_disk = select_first([increase_disk_size, 20])
-  # Germline single sample GVCFs shouldn't get bigger even when the input bam is bigger (after a certain size)
-  Int GVCF_disk_size = select_first([increase_disk_size, 30])
-  #BQSR bins the qualities which makes a significantly smaller bam
-  Float binned_qual_bam_size = size(to_bam_workflow.output_bam, "GB")
-
-  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + size(ref_dict, "GB")
-  Float dbsnp_size = size(dbSNP_vcf, "GB")
 
   # ValidateSamFile runs out of memory in mate validation on crazy edge case data, so we want to skip the mate validation
   # in those cases.  These values set the thresholds for what is considered outside the normal realm of "reasonable" data.
@@ -130,11 +115,8 @@ workflow germline_single_sample_workflow {
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
       output_basename = base_file_name,
-      disk_size = (2 * binned_qual_bam_size) + ref_size + additional_disk,
       preemptible_tries = agg_preemptible_tries
   }
-
-  Float cram_size = size(ConvertToCram.output_cram, "GB")
 
   # Check whether the data has massively high duplication or chimerism rates
   call QC.CheckPreValidation as CheckPreValidation {
@@ -158,7 +140,6 @@ workflow germline_single_sample_workflow {
       ignore = ["MISSING_TAG_NM"],
       max_output = 1000000000,
       is_outlier_data = CheckPreValidation.is_outlier_data,
-      disk_size = cram_size + ref_size + additional_disk,
       preemptible_tries = agg_preemptible_tries
   }
 
@@ -189,8 +170,7 @@ workflow germline_single_sample_workflow {
         ref_dict = ref_dict,
         ref_fasta = ref_fasta,
         ref_fasta_index = ref_fasta_index,
-        # Divide the total output GVCF size and the input bam size to account for the smaller scattered input and output.
-        disk_size = ((binned_qual_bam_size + GVCF_disk_size) / hc_divisor) + ref_size + additional_disk,
+        hc_scatter = hc_divisor,
         preemptible_tries = agg_preemptible_tries
      }
   }
@@ -201,7 +181,6 @@ workflow germline_single_sample_workflow {
       input_vcfs = HaplotypeCaller.output_gvcf,
       input_vcfs_indexes = HaplotypeCaller.output_gvcf_index,
       output_vcf_name = final_gvcf_base_name + ".g.vcf.gz",
-      disk_size = GVCF_disk_size,
       preemptible_tries = agg_preemptible_tries
   }
 
@@ -218,7 +197,6 @@ workflow germline_single_sample_workflow {
       ref_fasta_index = ref_fasta_index,
       ref_dict = ref_dict,
       wgs_calling_interval_list = wgs_calling_interval_list,
-      disk_size = gvcf_size + ref_size + dbsnp_size + additional_disk,
       preemptible_tries = agg_preemptible_tries
   }
 
@@ -232,7 +210,6 @@ workflow germline_single_sample_workflow {
       dbSNP_vcf_index = dbSNP_vcf_index,
       ref_dict = ref_dict,
       wgs_evaluation_interval_list = wgs_evaluation_interval_list,
-      disk_size = gvcf_size + dbsnp_size + additional_disk,
       preemptible_tries = agg_preemptible_tries
   }
 
@@ -296,4 +273,3 @@ workflow germline_single_sample_workflow {
     File output_vcf_index = MergeVCFs.output_vcf_index
   }
 }
-

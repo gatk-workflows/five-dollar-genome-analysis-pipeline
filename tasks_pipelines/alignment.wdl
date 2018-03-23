@@ -23,7 +23,7 @@ task GetBwaVersion {
     sed 's/Version: //'
   }
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
     memory: "1 GB"
   }
   output {
@@ -50,9 +50,16 @@ task SamToFastqAndBwaMemAndMba {
   File ref_bwt
   File ref_pac
   File ref_sa
-  Float disk_size
   Int compression_level
   Int preemptible_tries
+
+  Float unmapped_bam_size = size(input_bam, "GB")
+  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + size(ref_dict, "GB")
+  Float bwa_ref_size = ref_size + size(ref_alt, "GB") + size(ref_amb, "GB") + size(ref_ann, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_sa, "GB")
+  # Sometimes the output is larger than the input, or a task can spill to disk.
+  # In these cases we need to account for the input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
+  Float disk_multiplier = 2.5
+  Int disk_size = ceil(unmapped_bam_size + bwa_ref_size + (disk_multiplier * unmapped_bam_size) + 20)
 
   command <<<
     set -o pipefail
@@ -107,11 +114,11 @@ task SamToFastqAndBwaMemAndMba {
     fi
   >>>
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
     preemptible: preemptible_tries
     memory: "14 GB"
     cpu: "16"
-    disks: "local-disk " + sub(disk_size, "\\..*", "") + " HDD"
+    disks: "local-disk " + disk_size + " HDD"
   }
   output {
     File output_bam = "${output_bam_basename}.bam"
@@ -122,9 +129,13 @@ task SamToFastqAndBwaMemAndMba {
 task SamSplitter {
   File input_bam
   Int n_reads
-  Int disk_size
   Int preemptible_tries
   Int compression_level
+
+  Float unmapped_bam_size = size(input_bam, "GB")
+  # Since the output bams are less compressed than the input bam we need a disk multiplier that's larger than 2.
+  Float disk_multiplier = 2.5
+  Int disk_size = ceil(disk_multiplier * unmapped_bam_size + 20)
 
   command {
     set -e
