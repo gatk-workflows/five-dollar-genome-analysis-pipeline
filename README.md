@@ -3,9 +3,7 @@ Workflows used for germline short variant discovery in WGS data
 ### germline_single_sample_workflow :
 This WDL pipeline implements data pre-processing and initial variant calling (GVCF
 generation) according to the GATK Best Practices (June 2016) for germline SNP and
-Indel discovery in human whole-genome sequencing and exome sequencing data. The provided
-intervals in the json are intended for whole-genome sequencing, users are expected to use
-thier own exome intervals for exome sequencing. 
+Indel discovery in human whole-genome sequencing data.
 
 Note: For those users interested in running this wdl on FireCloud (FC), the FC
 version has been provided as fc_germline_single_sample_workflow.wdl. Please visit the 
