@@ -2,7 +2,7 @@
 ##
 ## This WDL pipeline implements data pre-processing and initial variant calling (GVCF
 ## generation) according to the GATK Best Practices (June 2016) for germline SNP and
-## Indel discovery in human whole-genome and exome sequencing data.
+## Indel discovery in human whole-genome.
 ##
 ## Requirements/expectations :
 ## - Human whole-genome pair-end sequencing data in unmapped BAM (uBAM) format
