@@ -2,7 +2,7 @@
 ##
 ## This WDL pipeline implements data pre-processing and initial variant calling (GVCF
 ## generation) according to the GATK Best Practices (June 2016) for germline SNP and
-## Indel discovery in human whole-genome.
+## Indel discovery in human whole-genome sequencing data.
 ##
 ## Requirements/expectations :
 ## - Human whole-genome pair-end sequencing data in unmapped BAM (uBAM) format
@@ -26,12 +26,12 @@
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-import "https://api.firecloud.org/ga4gh/v1/tools/gatk:alignment/versions/2/plain-WDL/descriptor" as Alignment
-import "https://api.firecloud.org/ga4gh/v1/tools/gatk:split-large-readgroup/versions/2/plain-WDL/descriptor" as SplitRG
-import "https://api.firecloud.org/ga4gh/v1/tools/gatk:quality-control/versions/1/plain-WDL/descriptor" as QC
-import "https://api.firecloud.org/ga4gh/v1/tools/gatk:bam-processing/versions/2/plain-WDL/descriptor" as Processing
-import "https://api.firecloud.org/ga4gh/v1/tools/gatk:germline-variant-discovery/versions/2/plain-WDL/descriptor" as Calling
-import "https://api.firecloud.org/ga4gh/v1/tools/gatk:utilities/versions/1/plain-WDL/descriptor" as Utils
+import "https://api.firecloud.org/ga4gh/v1/tools/gatk:alignment/versions/4/plain-WDL/descriptor" as Alignment
+import "https://api.firecloud.org/ga4gh/v1/tools/gatk:split-large-readgroup/versions/4/plain-WDL/descriptor" as SplitRG
+import "https://api.firecloud.org/ga4gh/v1/tools/gatk:quality-control/versions/2/plain-WDL/descriptor" as QC
+import "https://api.firecloud.org/ga4gh/v1/tools/gatk:bam-processing/versions/4/plain-WDL/descriptor" as Processing
+import "https://api.firecloud.org/ga4gh/v1/tools/gatk:germline-variant-discovery/versions/3/plain-WDL/descriptor" as Calling
+import "https://api.firecloud.org/ga4gh/v1/tools/gatk:utilities/versions/2/plain-WDL/descriptor" as Utils
 
 # WORKFLOW DEFINITION
 workflow germline_single_sample_workflow {
