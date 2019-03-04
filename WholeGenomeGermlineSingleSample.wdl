@@ -28,14 +28,25 @@ version 1.0
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-import "./tasks/UnmappedBamToAlignedBam.wdl" as ToBam
-import "./tasks/AggregatedBamQC.wdl" as AggregatedQC
-import "./tasks/GermlineVariantDiscovery.wdl" as Calling
-import "./tasks/Qc.wdl" as QC
-import "./tasks/Utilities.wdl" as Utils
-import "./tasks/BamToCram.wdl" as ToCram
-import "./tasks/BamToGvcf.wdl" as ToGvcf
-import "./structs/GermlineStructs.wdl"
+# Local import
+#import "./tasks/UnmappedBamToAlignedBam.wdl" as ToBam
+#import "./tasks/AggregatedBamQC.wdl" as AggregatedQC
+#import "./tasks/GermlineVariantDiscovery.wdl" as Calling
+#import "./tasks/Qc.wdl" as QC
+#import "./tasks/Utilities.wdl" as Utils
+#import "./tasks/BamToCram.wdl" as ToCram
+#import "./tasks/BamToGvcf.wdl" as ToGvcf
+#import "./structs/GermlineStructs.wdl"
+
+# Git URL import
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/UnmappedBamToAlignedBam.wdl" as ToBam
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/AggregatedBamQC.wdl" as AggregatedQC
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/GermlineVariantDiscovery.wdl" as Calling
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/Qc.wdl" as QC
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/Utilities.wdl" as Utils
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/BamToCram.wdl" as ToCram
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/BamToGvcf.wdl" as ToGvcf
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/structs/GermlineStructs.wdl"
 
 # WORKFLOW DEFINITION
 workflow WholeGenomeGermlineSingleSample {

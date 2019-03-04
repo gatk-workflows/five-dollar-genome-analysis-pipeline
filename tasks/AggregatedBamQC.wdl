@@ -15,8 +15,13 @@ version 1.0
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-import "./Qc.wdl" as QC
-import "../structs/GermlineStructs.wdl"
+# Local import
+#import "./Qc.wdl" as QC
+#import "../structs/GermlineStructs.wdl"
+
+# Git URL import
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/Qc.wdl" as QC
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/structs/GermlineStructs.wdl"
 
 # WORKFLOW DEFINITION
 workflow AggregatedBamQC {

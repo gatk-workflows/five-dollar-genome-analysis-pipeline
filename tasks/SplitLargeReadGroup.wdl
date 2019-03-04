@@ -15,10 +15,17 @@ version 1.0
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-import "./Alignment.wdl" as Alignment
-import "./BamProcessing.wdl" as Processing
-import "./Utilities.wdl" as Utils
-import "../structs/GermlineStructs.wdl" as Structs
+# Local Import
+#import "./Alignment.wdl" as Alignment
+#import "./BamProcessing.wdl" as Processing
+#import "./Utilities.wdl" as Utils
+#import "../structs/GermlineStructs.wdl" as Structs
+
+# Git URL Import
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/Alignment.wdl" as Alignment
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/BamProcessing.wdl" as Processing
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/Utilities.wdl" as Utils
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/structs/GermlineStructs.wdl" as Structs
 
 workflow SplitLargeReadGroup {
   input {

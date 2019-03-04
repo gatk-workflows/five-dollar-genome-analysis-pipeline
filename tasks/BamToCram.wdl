@@ -1,7 +1,12 @@
 version 1.0
 
-import "Utilities.wdl" as Utils
-import "Qc.wdl" as QC
+# Local Import
+#import "Utilities.wdl" as Utils
+#import "Qc.wdl" as QC
+
+# Git URL Import
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/Utilities.wdl" as Utils
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/Qc.wdl" as QC
 
 workflow BamToCram {
 
