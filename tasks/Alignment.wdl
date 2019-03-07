@@ -1,3 +1,4 @@
+version 1.0
 ## Copyright Broad Institute, 2018
 ##
 ## This WDL defines tasks used for alignment of human whole-genome or exome sequencing data.
@@ -13,6 +14,12 @@
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
+# Local Import
+#import "../structs/GermlineStructs.wdl"
+
+# Git URL Import
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/structs/GermlineStructs.wdl"
+
 # Get version of BWA
 task GetBwaVersion {
   command {
@@ -23,39 +30,34 @@ task GetBwaVersion {
     sed 's/Version: //'
   }
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
     memory: "1 GB"
   }
   output {
-    String version = read_string(stdout())
+    String bwa_version = read_string(stdout())
   }
 }
 
 # Read unmapped BAM, convert on-the-fly to FASTQ and stream to BWA MEM for alignment, then stream to MergeBamAlignment
 task SamToFastqAndBwaMemAndMba {
-  File input_bam
-  String bwa_commandline
-  String bwa_version
-  String output_bam_basename
-  File ref_fasta
-  File ref_fasta_index
-  File ref_dict
+  input {
+    File input_bam
+    String bwa_commandline
+    String bwa_version
+    String output_bam_basename
 
-  # This is the .alt file from bwa-kit (https://github.com/lh3/bwa/tree/master/bwakit),
-  # listing the reference contigs that are "alternative".
-  File ref_alt
+    # reference_fasta.ref_alt is the .alt file from bwa-kit
+    # (https://github.com/lh3/bwa/tree/master/bwakit),
+    # listing the reference contigs that are "alternative".
+    ReferenceFasta reference_fasta
 
-  File ref_amb
-  File ref_ann
-  File ref_bwt
-  File ref_pac
-  File ref_sa
-  Int compression_level
-  Int preemptible_tries
+    Int compression_level
+    Int preemptible_tries
+  }
 
   Float unmapped_bam_size = size(input_bam, "GB")
-  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB") + size(ref_dict, "GB")
-  Float bwa_ref_size = ref_size + size(ref_alt, "GB") + size(ref_amb, "GB") + size(ref_ann, "GB") + size(ref_bwt, "GB") + size(ref_pac, "GB") + size(ref_sa, "GB")
+  Float ref_size = size(reference_fasta.ref_fasta, "GB") + size(reference_fasta.ref_fasta_index, "GB") + size(reference_fasta.ref_dict, "GB")
+  Float bwa_ref_size = ref_size + size(reference_fasta.ref_alt, "GB") + size(reference_fasta.ref_amb, "GB") + size(reference_fasta.ref_ann, "GB") + size(reference_fasta.ref_bwt, "GB") + size(reference_fasta.ref_pac, "GB") + size(reference_fasta.ref_sa, "GB")
   # Sometimes the output is larger than the input, or a task can spill to disk.
   # In these cases we need to account for the input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
   Float disk_multiplier = 2.5
@@ -66,17 +68,17 @@ task SamToFastqAndBwaMemAndMba {
     set -e
 
     # set the bash variable needed for the command-line
-    bash_ref_fasta=${ref_fasta}
-    # if ref_alt has data in it,
-    if [ -s ${ref_alt} ]; then
-      java -Xms5000m -jar /usr/gitc/picard.jar \
+    bash_ref_fasta=~{reference_fasta.ref_fasta}
+    # if reference_fasta.ref_alt has data in it,
+    if [ -s ~{reference_fasta.ref_alt} ]; then
+      java -Xms1000m -Xmx1000m -jar /usr/gitc/picard.jar \
         SamToFastq \
-        INPUT=${input_bam} \
+        INPUT=~{input_bam} \
         FASTQ=/dev/stdout \
         INTERLEAVE=true \
         NON_PF=true | \
-      /usr/gitc/${bwa_commandline} /dev/stdin - 2> >(tee ${output_bam_basename}.bwa.stderr.log >&2) | \
-      java -Dsamjdk.compression_level=${compression_level} -Xms3000m -jar /usr/gitc/picard.jar \
+      /usr/gitc/~{bwa_commandline} /dev/stdin - 2> >(tee ~{output_bam_basename}.bwa.stderr.log >&2) | \
+      java -Dsamjdk.compression_level=~{compression_level} -Xms1000m -Xmx1000m -jar /usr/gitc/picard.jar \
         MergeBamAlignment \
         VALIDATION_STRINGENCY=SILENT \
         EXPECTED_ORIENTATIONS=FR \
@@ -84,9 +86,9 @@ task SamToFastqAndBwaMemAndMba {
         ATTRIBUTES_TO_REMOVE=NM \
         ATTRIBUTES_TO_REMOVE=MD \
         ALIGNED_BAM=/dev/stdin \
-        UNMAPPED_BAM=${input_bam} \
-        OUTPUT=${output_bam_basename}.bam \
-        REFERENCE_SEQUENCE=${ref_fasta} \
+        UNMAPPED_BAM=~{input_bam} \
+        OUTPUT=~{output_bam_basename}.bam \
+        REFERENCE_SEQUENCE=~{reference_fasta.ref_fasta} \
         PAIRED_RUN=true \
         SORT_ORDER="unsorted" \
         IS_BISULFITE_SEQUENCE=false \
@@ -97,40 +99,42 @@ task SamToFastqAndBwaMemAndMba {
         MAX_INSERTIONS_OR_DELETIONS=-1 \
         PRIMARY_ALIGNMENT_STRATEGY=MostDistant \
         PROGRAM_RECORD_ID="bwamem" \
-        PROGRAM_GROUP_VERSION="${bwa_version}" \
-        PROGRAM_GROUP_COMMAND_LINE="${bwa_commandline}" \
+        PROGRAM_GROUP_VERSION="~{bwa_version}" \
+        PROGRAM_GROUP_COMMAND_LINE="~{bwa_commandline}" \
         PROGRAM_GROUP_NAME="bwamem" \
         UNMAPPED_READ_STRATEGY=COPY_TO_TAG \
         ALIGNER_PROPER_PAIR_FLAGS=true \
         UNMAP_CONTAMINANT_READS=true \
         ADD_PG_TAG_TO_READS=false
 
-      grep -m1 "read .* ALT contigs" ${output_bam_basename}.bwa.stderr.log | \
+      grep -m1 "read .* ALT contigs" ~{output_bam_basename}.bwa.stderr.log | \
       grep -v "read 0 ALT contigs"
 
-    # else ref_alt is empty or could not be found
+    # else reference_fasta.ref_alt is empty or could not be found
     else
       exit 1;
     fi
   >>>
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
     preemptible: preemptible_tries
     memory: "14 GB"
     cpu: "16"
     disks: "local-disk " + disk_size + " HDD"
   }
   output {
-    File output_bam = "${output_bam_basename}.bam"
-    File bwa_stderr_log = "${output_bam_basename}.bwa.stderr.log"
+    File output_bam = "~{output_bam_basename}.bam"
+    File bwa_stderr_log = "~{output_bam_basename}.bwa.stderr.log"
   }
 }
 
 task SamSplitter {
-  File input_bam
-  Int n_reads
-  Int preemptible_tries
-  Int compression_level
+  input {
+    File input_bam
+    Int n_reads
+    Int preemptible_tries
+    Int compression_level
+  }
 
   Float unmapped_bam_size = size(input_bam, "GB")
   # Since the output bams are less compressed than the input bam we need a disk multiplier that's larger than 2.
@@ -141,19 +145,19 @@ task SamSplitter {
     set -e
     mkdir output_dir
 
-    total_reads=$(samtools view -c ${input_bam})
+    total_reads=$(samtools view -c ~{input_bam})
 
-    java -Dsamjdk.compression_level=${compression_level} -Xms3000m -jar /usr/gitc/picard.jar SplitSamByNumberOfReads \
-      INPUT=${input_bam} \
+    java -Dsamjdk.compression_level=~{compression_level} -Xms3000m -jar /usr/gitc/picard.jar SplitSamByNumberOfReads \
+      INPUT=~{input_bam} \
       OUTPUT=output_dir \
-      SPLIT_TO_N_READS=${n_reads} \
+      SPLIT_TO_N_READS=~{n_reads} \
       TOTAL_READS_IN_INPUT=$total_reads
   }
   output {
     Array[File] split_bams = glob("output_dir/*.bam")
   }
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.3-1513176735"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
     preemptible: preemptible_tries
     memory: "3.75 GB"
     disks: "local-disk " + disk_size + " HDD"

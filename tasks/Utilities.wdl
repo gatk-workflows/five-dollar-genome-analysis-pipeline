@@ -1,3 +1,4 @@
+version 1.0
 ## Copyright Broad Institute, 2018
 ##
 ## This WDL defines utility tasks used for processing of sequencing data.
@@ -15,15 +16,16 @@
 
 # Generate sets of intervals for scatter-gathering over chromosomes
 task CreateSequenceGroupingTSV {
-  File ref_dict
-  Int preemptible_tries
-
+  input {
+    File ref_dict
+    Int preemptible_tries
+  }
   # Use python to create the Sequencing Groupings used for BQSR and PrintReads Scatter.
   # It outputs to stdout where it is parsed into a wdl Array[Array[String]]
   # e.g. [["1"], ["2"], ["3", "4"], ["5"], ["6", "7", "8"]]
   command <<<
     python <<CODE
-    with open("${ref_dict}", "r") as ref_dict_file:
+    with open("~{ref_dict}", "r") as ref_dict_file:
         sequence_tuple_list = []
         longest_sequence = 0
         for line in ref_dict_file:
@@ -72,21 +74,23 @@ task CreateSequenceGroupingTSV {
 # Note that the number of sub interval lists may not be exactly equal to scatter_count.  There may be slightly more or less.
 # Thus we have the block of python to count the number of generated sub interval lists.
 task ScatterIntervalList {
-  File interval_list
-  Int scatter_count
-  Int break_bands_at_multiples_of
+  input {
+    File interval_list
+    Int scatter_count
+    Int break_bands_at_multiples_of
+  }
 
   command <<<
     set -e
     mkdir out
     java -Xms1g -jar /usr/gitc/picard.jar \
       IntervalListTools \
-      SCATTER_COUNT=${scatter_count} \
+      SCATTER_COUNT=~{scatter_count} \
       SUBDIVISION_MODE=BALANCING_WITHOUT_INTERVAL_SUBDIVISION_WITH_OVERFLOW \
       UNIQUE=true \
       SORT=true \
-      BREAK_BANDS_AT_MULTIPLES_OF=${break_bands_at_multiples_of} \
-      INPUT=${interval_list} \
+      BREAK_BANDS_AT_MULTIPLES_OF=~{break_bands_at_multiples_of} \
+      INPUT=~{interval_list} \
       OUTPUT=out
 
     python3 <<CODE
@@ -105,7 +109,7 @@ task ScatterIntervalList {
     Int interval_count = read_int(stdout())
   }
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
     memory: "2 GB"
   }
 }
@@ -113,11 +117,13 @@ task ScatterIntervalList {
 # Convert BAM file to CRAM format
 # Note that reading CRAMs directly with Picard is not yet supported
 task ConvertToCram {
-  File input_bam
-  File ref_fasta
-  File ref_fasta_index
-  String output_basename
-  Int preemptible_tries
+  input {
+    File input_bam
+    File ref_fasta
+    File ref_fasta_index
+    String output_basename
+    Int preemptible_tries
+  }
 
   Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
   Int disk_size = ceil(2 * size(input_bam, "GB") + ref_size) + 20
@@ -126,66 +132,70 @@ task ConvertToCram {
     set -e
     set -o pipefail
 
-    samtools view -C -T ${ref_fasta} ${input_bam} | \
-    tee ${output_basename}.cram | \
-    md5sum | awk '{print $1}' > ${output_basename}.cram.md5
+    samtools view -C -T ~{ref_fasta} ~{input_bam} | \
+    tee ~{output_basename}.cram | \
+    md5sum | awk '{print $1}' > ~{output_basename}.cram.md5
 
     # Create REF_CACHE. Used when indexing a CRAM
-    seq_cache_populate.pl -root ./ref/cache ${ref_fasta}
+    seq_cache_populate.pl -root ./ref/cache ~{ref_fasta}
     export REF_PATH=:
     export REF_CACHE=./ref/cache/%2s/%2s/%s
 
-    samtools index ${output_basename}.cram
+    samtools index ~{output_basename}.cram
   >>>
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
     preemptible: preemptible_tries
     memory: "3 GB"
     cpu: "1"
     disks: "local-disk " + disk_size + " HDD"
   }
   output {
-    File output_cram = "${output_basename}.cram"
-    File output_cram_index = "${output_basename}.cram.crai"
-    File output_cram_md5 = "${output_basename}.cram.md5"
+    File output_cram = "~{output_basename}.cram"
+    File output_cram_index = "~{output_basename}.cram.crai"
+    File output_cram_md5 = "~{output_basename}.cram.md5"
   }
 }
 
 # Convert CRAM file to BAM format
 task ConvertToBam {
-  File input_cram
-  File ref_fasta
-  File ref_fasta_index
-  String output_basename
+  input {
+    File input_cram
+    File ref_fasta
+    File ref_fasta_index
+    String output_basename
+  }
 
   command <<<
     set -e
     set -o pipefail
 
-    samtools view -b -o ${output_basename}.bam -T ${ref_fasta} ${input_cram}
+    samtools view -b -o ~{output_basename}.bam -T ~{ref_fasta} ~{input_cram}
 
-    samtools index ${output_basename}.bam
+    samtools index ~{output_basename}.bam
   >>>
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.3.2-1510681135"
+    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
     preemptible: 3
     memory: "3 GB"
     cpu: "1"
     disks: "local-disk 200 HDD"
   }
   output {
-    File output_bam = "${output_basename}.bam"
-    File output_bam_index = "${output_basename}.bam.bai"
+    File output_bam = "~{output_basename}.bam"
+    File output_bam_index = "~{output_basename}.bam.bai"
   }
 }
 
 # Calculates sum of a list of floats
 task SumFloats {
-  Array[Float] sizes
-  Int preemptible_tries
+  input {
+    Array[Float] sizes
+    Int preemptible_tries
+  }
 
   command <<<
-  python -c "print ${sep="+" sizes}"
+  python -c "print ~{sep="+" sizes}"
   >>>
   output {
     Float total_size = read_float(stdout())
