@@ -26,10 +26,15 @@
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-import "./tasks_pipelines/unmapped_bam_to_aligned_bam.wdl" as ToBam
-import "./tasks_pipelines/germline_variant_discovery.wdl" as Calling
-import "./tasks_pipelines/qc.wdl" as QC
-import "./tasks_pipelines/utilities.wdl" as Utils
+#import "./tasks_pipelines/unmapped_bam_to_aligned_bam.wdl" as ToBam
+#import "./tasks_pipelines/germline_variant_discovery.wdl" as Calling
+#import "./tasks_pipelines/qc.wdl" as QC
+#import "./tasks_pipelines/utilities.wdl" as Utils
+
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.0.3/tasks_pipelines/unmapped_bam_to_aligned_bam.wdl" as Processing
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.0.3/tasks_pipelines/germline_variant_discovery.wdl" as Calling
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.0.3/tasks_pipelines/qc.wdl" as QC
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.0.3/tasks_pipelines/utilities.wdl" as Utils
 
 # WORKFLOW DEFINITION
 workflow germline_single_sample_workflow {

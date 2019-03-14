@@ -14,11 +14,11 @@
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-import "./tasks_pipelines/alignment.wdl" as Alignment
-import "./tasks_pipelines/split_large_readgroup.wdl" as SplitRG
-import "./tasks_pipelines/qc.wdl" as QC
-import "./tasks_pipelines/bam_processing.wdl" as Processing
-import "./tasks_pipelines/utilities.wdl" as Utils
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.0.3/tasks_pipelines/alignment.wdl" as Alignment
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.0.3/tasks_pipelines/split_large_readgroup.wdl" as SplitRG
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.0.3/tasks_pipelines/qc.wdl" as QC
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.0.3/tasks_pipelines/bam_processing.wdl" as Processing
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.0.3/tasks_pipelines/utilities.wdl" as Utils
 
 # WORKFLOW DEFINITION
 workflow to_bam_workflow {
