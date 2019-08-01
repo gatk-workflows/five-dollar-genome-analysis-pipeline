@@ -18,7 +18,7 @@ version 1.0
 #import "../structs/GermlineStructs.wdl"
 
 # Git URL Import
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/structs/GermlineStructs.wdl"
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/structs/GermlineStructs.wdl"
 
 # Get version of BWA
 task GetBwaVersion {
