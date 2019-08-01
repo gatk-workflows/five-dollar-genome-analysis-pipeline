@@ -1,7 +1,7 @@
 version 1.0
 
 # Local Import
-#import "GermlineVarianltDiscovery.wdl" as Calling
+#import "GermlineVariantDiscovery.wdl" as Calling
 #import "Qc.wdl" as QC
 #import "Utilities.wdl" as Utils
 
