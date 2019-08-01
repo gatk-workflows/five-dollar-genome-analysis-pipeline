@@ -31,7 +31,7 @@ task GetBwaVersion {
   }
   runtime {
     docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
-    memory: "1 GB"
+    memory: "1 GiB"
   }
   output {
     String bwa_version = read_string(stdout())
@@ -55,9 +55,9 @@ task SamToFastqAndBwaMemAndMba {
     Int preemptible_tries
   }
 
-  Float unmapped_bam_size = size(input_bam, "GB")
-  Float ref_size = size(reference_fasta.ref_fasta, "GB") + size(reference_fasta.ref_fasta_index, "GB") + size(reference_fasta.ref_dict, "GB")
-  Float bwa_ref_size = ref_size + size(reference_fasta.ref_alt, "GB") + size(reference_fasta.ref_amb, "GB") + size(reference_fasta.ref_ann, "GB") + size(reference_fasta.ref_bwt, "GB") + size(reference_fasta.ref_pac, "GB") + size(reference_fasta.ref_sa, "GB")
+  Float unmapped_bam_size = size(input_bam, "GiB")
+  Float ref_size = size(reference_fasta.ref_fasta, "GiB") + size(reference_fasta.ref_fasta_index, "GiB") + size(reference_fasta.ref_dict, "GiB")
+  Float bwa_ref_size = ref_size + size(reference_fasta.ref_alt, "GiB") + size(reference_fasta.ref_amb, "GiB") + size(reference_fasta.ref_ann, "GiB") + size(reference_fasta.ref_bwt, "GiB") + size(reference_fasta.ref_pac, "GiB") + size(reference_fasta.ref_sa, "GiB")
   # Sometimes the output is larger than the input, or a task can spill to disk.
   # In these cases we need to account for the input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
   Float disk_multiplier = 2.5
@@ -118,7 +118,7 @@ task SamToFastqAndBwaMemAndMba {
   runtime {
     docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
     preemptible: preemptible_tries
-    memory: "14 GB"
+    memory: "14 GiB"
     cpu: "16"
     disks: "local-disk " + disk_size + " HDD"
   }
@@ -136,7 +136,7 @@ task SamSplitter {
     Int compression_level
   }
 
-  Float unmapped_bam_size = size(input_bam, "GB")
+  Float unmapped_bam_size = size(input_bam, "GiB")
   # Since the output bams are less compressed than the input bam we need a disk multiplier that's larger than 2.
   Float disk_multiplier = 2.5
   Int disk_size = ceil(disk_multiplier * unmapped_bam_size + 20)
@@ -159,7 +159,7 @@ task SamSplitter {
   runtime {
     docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
     preemptible: preemptible_tries
-    memory: "3.75 GB"
+    memory: "3.75 GiB"
     disks: "local-disk " + disk_size + " HDD"
   }
 }

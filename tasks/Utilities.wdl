@@ -1,4 +1,5 @@
 version 1.0
+
 ## Copyright Broad Institute, 2018
 ##
 ## This WDL defines utility tasks used for processing of sequencing data.
@@ -61,8 +62,8 @@ task CreateSequenceGroupingTSV {
   >>>
   runtime {
     preemptible: preemptible_tries
-    docker: "python:2.7"
-    memory: "2 GB"
+    docker: "us.gcr.io/broad-gotc-prod/python:2.7"
+    memory: "2 GiB"
   }
   output {
     Array[Array[String]] sequence_grouping = read_tsv("sequence_grouping.txt")
@@ -110,7 +111,7 @@ task ScatterIntervalList {
   }
   runtime {
     docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
-    memory: "2 GB"
+    memory: "2 GiB"
   }
 }
 
@@ -125,8 +126,8 @@ task ConvertToCram {
     Int preemptible_tries
   }
 
-  Float ref_size = size(ref_fasta, "GB") + size(ref_fasta_index, "GB")
-  Int disk_size = ceil(2 * size(input_bam, "GB") + ref_size) + 20
+  Float ref_size = size(ref_fasta, "GiB") + size(ref_fasta_index, "GiB")
+  Int disk_size = ceil(2 * size(input_bam, "GiB") + ref_size) + 20
 
   command <<<
     set -e
@@ -146,7 +147,7 @@ task ConvertToCram {
   runtime {
     docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
     preemptible: preemptible_tries
-    memory: "3 GB"
+    memory: "3 GiB"
     cpu: "1"
     disks: "local-disk " + disk_size + " HDD"
   }
@@ -177,7 +178,7 @@ task ConvertToBam {
   runtime {
     docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.1-1540490856"
     preemptible: 3
-    memory: "3 GB"
+    memory: "3 GiB"
     cpu: "1"
     disks: "local-disk 200 HDD"
   }
@@ -201,7 +202,7 @@ task SumFloats {
     Float total_size = read_float(stdout())
   }
   runtime {
-    docker: "python:2.7"
+    docker: "us.gcr.io/broad-gotc-prod/python:2.7"
     preemptible: preemptible_tries
   }
 }
