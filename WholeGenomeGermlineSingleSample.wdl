@@ -45,7 +45,7 @@ import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-anal
 import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/Qc.wdl" as QC
 import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/Utilities.wdl" as Utils
 import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/BamToCram.wdl" as ToCram
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/BamToGvcf.wdl" as ToGvcf
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/BamToGvcf.wdl" as ToGvcf
 import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/structs/GermlineStructs.wdl"
 
 # WORKFLOW DEFINITION
