@@ -29,24 +29,24 @@ version 1.0
 ## licensing information pertaining to the included programs.
 
 # Local import
-#import "./tasks/UnmappedBamToAlignedBam.wdl" as ToBam
-#import "./tasks/AggregatedBamQC.wdl" as AggregatedQC
-#import "./tasks/GermlineVariantDiscovery.wdl" as Calling
-#import "./tasks/Qc.wdl" as QC
-#import "./tasks/Utilities.wdl" as Utils
-#import "./tasks/BamToCram.wdl" as ToCram
-#import "./tasks/BamToGvcf.wdl" as ToGvcf
-#import "./structs/GermlineStructs.wdl"
+#import "../../../../pipelines/dna_seq/UnmappedBamToAlignedBam.wdl" as ToBam
+#import "../../../../tasks/AggregatedBamQC.wdl" as AggregatedQC
+#import "../../../../tasks/GermlineVariantDiscovery.wdl" as Calling
+#import "../../../../tasks/Qc.wdl" as QC
+#import "../../../../tasks/Utilities.wdl" as Utils
+#import "../../../../tasks/BamToCram.wdl" as ToCram
+#import "../../../../tasks/VariantCalling.wdl" as ToGvcf
+#import "../../../../structs/dna_seq/germline/GermlineStructs.wdl"
 
 # Git URL import
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/UnmappedBamToAlignedBam.wdl" as ToBam
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/AggregatedBamQC.wdl" as AggregatedQC
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/GermlineVariantDiscovery.wdl" as Calling
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/Qc.wdl" as QC
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/Utilities.wdl" as Utils
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/tasks/BamToCram.wdl" as ToCram
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/BamToGvcf.wdl" as ToGvcf
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.1.0/structs/GermlineStructs.wdl"
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/UnmappedBamToAlignedBam.wdl" as ToBam
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/AggregatedBamQC.wdl" as AggregatedQC
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/GermlineVariantDiscovery.wdl" as Calling
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/Qc.wdl" as QC
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/Utilities.wdl" as Utils
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/BamToCram.wdl" as ToCram
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/VariantCalling.wdl" as ToGvcf
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/structs/GermlineStructs.wdl"
 
 # WORKFLOW DEFINITION
 workflow WholeGenomeGermlineSingleSample {
@@ -57,6 +57,8 @@ workflow WholeGenomeGermlineSingleSample {
     File wgs_coverage_interval_list
 
     File? haplotype_database_file
+    Boolean provide_bam_output = false
+    Boolean use_gatk3_haplotype_caller = true
   }
 
   # Not overridable:
@@ -127,7 +129,7 @@ workflow WholeGenomeGermlineSingleSample {
       preemptible_tries = papi_settings.agg_preemptible_tries
   }
 
-  call ToGvcf.BamToGvcf as BamToGvcf {
+  call ToGvcf.VariantCalling as BamToGvcf {
     input:
       calling_interval_list = references.calling_interval_list,
       evaluation_interval_list = references.evaluation_interval_list,
@@ -141,8 +143,14 @@ workflow WholeGenomeGermlineSingleSample {
       dbsnp_vcf = references.dbsnp_vcf,
       dbsnp_vcf_index = references.dbsnp_vcf_index,
       base_file_name = sample_and_unmapped_bams.base_file_name,
-      final_gvcf_base_name = sample_and_unmapped_bams.final_gvcf_base_name,
-      agg_preemptible_tries = papi_settings.agg_preemptible_tries
+      final_vcf_base_name = sample_and_unmapped_bams.final_gvcf_base_name,
+      agg_preemptible_tries = papi_settings.agg_preemptible_tries,
+      use_gatk3_haplotype_caller = use_gatk3_haplotype_caller
+  }
+
+  if (provide_bam_output) {
+    File provided_output_bam = UnmappedBamToAlignedBam.output_bam
+    File provided_output_bam_index = UnmappedBamToAlignedBam.output_bam_index
   }
 
   # Outputs that will be retained when execution is complete
@@ -193,8 +201,11 @@ workflow WholeGenomeGermlineSingleSample {
     File duplicate_metrics = UnmappedBamToAlignedBam.duplicate_metrics
     File output_bqsr_reports = UnmappedBamToAlignedBam.output_bqsr_reports
 
-    File gvcf_summary_metrics = BamToGvcf.gvcf_summary_metrics
-    File gvcf_detail_metrics = BamToGvcf.gvcf_detail_metrics
+    File gvcf_summary_metrics = BamToGvcf.vcf_summary_metrics
+    File gvcf_detail_metrics = BamToGvcf.vcf_detail_metrics
+
+    File? output_bam = provided_output_bam
+    File? output_bam_index = provided_output_bam_index
 
     File output_cram = BamToCram.output_cram
     File output_cram_index = BamToCram.output_cram_index
