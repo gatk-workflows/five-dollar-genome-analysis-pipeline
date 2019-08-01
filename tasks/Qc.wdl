@@ -554,7 +554,7 @@ task ValidateGVCF {
   runtime {
     docker: gatk_docker
     preemptible: preemptible_tries
-    memory: "3500 MB"
+    memory: "4000 MB"
     disks: "local-disk " + disk_size + " HDD"
   }
 }
