@@ -39,14 +39,14 @@ version 1.0
 #import "../../../../structs/dna_seq/germline/GermlineStructs.wdl"
 
 # Git URL import
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/UnmappedBamToAlignedBam.wdl" as ToBam
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/AggregatedBamQC.wdl" as AggregatedQC
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/GermlineVariantDiscovery.wdl" as Calling
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/Qc.wdl" as QC
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/Utilities.wdl" as Utils
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/BamToCram.wdl" as ToCram
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/tasks/VariantCalling.wdl" as ToGvcf
-import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/dev/structs/GermlineStructs.wdl"
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.2.0/tasks/UnmappedBamToAlignedBam.wdl" as ToBam
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.2.0/tasks/AggregatedBamQC.wdl" as AggregatedQC
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.2.0/tasks/GermlineVariantDiscovery.wdl" as Calling
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.2.0/tasks/Qc.wdl" as QC
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.2.0/tasks/Utilities.wdl" as Utils
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.2.0/tasks/BamToCram.wdl" as ToCram
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.2.0/tasks/VariantCalling.wdl" as ToGvcf
+import "https://raw.githubusercontent.com/gatk-workflows/five-dollar-genome-analysis-pipeline/1.2.0/structs/GermlineStructs.wdl"
 
 # WORKFLOW DEFINITION
 workflow WholeGenomeGermlineSingleSample {
