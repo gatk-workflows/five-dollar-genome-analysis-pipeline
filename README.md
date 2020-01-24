@@ -1,6 +1,8 @@
 # five-dollar-genome-analysis-pipeline
 Workflows used for germline short variant discovery in WGS data
 
+**This repository has been deprecated in favor of https://github.com/gatk-workflows/gatk4-genome-processing-pipeline**
+
 ### germline_single_sample_workflow :
 This WDL pipeline implements data pre-processing and initial variant calling (GVCF
 generation) according to the GATK Best Practices (June 2016) for germline SNP and
